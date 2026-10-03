@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 48 33% 97%;
+    --foreground: 30 3% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 3% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 3% 12%;
+    --primary: 14 55% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 48 22% 92%;
+    --secondary-foreground: 30 3% 12%;
+    --muted: 48 22% 92%;
+    --muted-foreground: 40 4% 41%;
+    --accent: 48 22% 92%;
+    --accent-foreground: 30 3% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 48 20% 87%;
+    --input: 48 20% 87%;
+    --ring: 14 55% 52%;
+    --radius: 0.75rem;
+  }
+
+  * { @apply border-border; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    @apply bg-background text-foreground antialiased font-sans;
+  }
+
+  h1, h2, h3 { @apply font-serif font-normal tracking-tight; }
+
+  ::selection { background: #C9644233; }
+}
+
+@layer components {
+  .eyebrow { @apply text-[12.5px] font-medium uppercase tracking-[0.16em] text-clay; }
+  .dot-grid {
+    background-image: radial-gradient(rgba(31, 30, 29, 0.11) 1px, transparent 1.3px);
+    background-size: 22px 22px;
+  }
+}
