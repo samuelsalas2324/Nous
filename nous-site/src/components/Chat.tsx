@@ -122,12 +122,12 @@ export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill
   }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-line bg-white/75 shadow-[0_40px_90px_-50px_rgba(201,100,66,0.45)] backdrop-blur">
+    <div className="glass glow-border overflow-hidden rounded-[28px] shadow-[0_40px_120px_-40px_rgb(255_110_80/0.4)]">
       {/* Zona superior: saludo (vacío) o conversación */}
       {empty ? (
-        <div className="bg-gradient-to-b from-clay/[0.07] to-transparent px-5 pb-8 pt-14 md:pt-20">
+        <div className="bg-gradient-to-b from-clay/[0.10] via-violet/[0.04] to-transparent px-5 pb-8 pt-14 md:pt-20">
           <div className="mx-auto max-w-2xl text-center">
-            <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3 py-1 text-xs text-mute">
+            <span className="mb-6 inline-flex items-center gap-2 glass rounded-full px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-mute">
               <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-clay opacity-50" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-clay" /></span> {agent ? 'Agente de ventas' : 'Nous'} · en línea
             </span>
             {agent ? (
@@ -160,7 +160,7 @@ export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill
             </div>
             <button
               onClick={() => { setMessages([]); setError(null) }}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-mute transition hover:bg-sand hover:text-ink"
+              className="flex items-center gap-1.5 rounded-full px-3 py-1 text-sm text-mute transition hover:bg-white/10 hover:text-ink"
             >
               <RotateCcw className="h-3.5 w-3.5" /> Nueva conversación
             </button>
@@ -169,7 +169,7 @@ export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill
             {messages.map((m, i) =>
               m.role === 'user' ? (
                 <div key={i} className="flex justify-end">
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl bg-sand px-4 py-2.5 text-[15.5px] leading-relaxed">
+                  <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md border border-white/10 bg-gradient-to-br from-clay/[0.22] to-violet/[0.16] px-4 py-2.5 shadow-[inset_0_1px_0_rgb(255_255_255/0.15)] text-[15.5px] leading-relaxed">
                     {m.content}
                   </div>
                 </div>
@@ -197,27 +197,27 @@ export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill
       {/* Compositor (siempre montado para conservar el foco) */}
       <div className={`mx-auto px-4 ${empty ? 'max-w-2xl' : 'max-w-3xl pb-4'}`}>
         {error && (
-          <div role="alert" className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-[#FBEAE4] px-3 py-2 text-sm text-clay-dark">
+          <div role="alert" className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-clay/30 bg-clay/10 px-3 py-2 text-sm text-clay-dark backdrop-blur-md">
             <p className="min-w-0 flex-1 basis-56">{error.text}</p>
             {error.cta === 'login' && (
-              <button onClick={() => openAuth('login')} className="shrink-0 rounded-md bg-clay px-3 py-1.5 font-medium text-white transition hover:bg-clay-dark">Ingresar</button>
+              <button onClick={() => openAuth('login')} className="btn-primary shrink-0 rounded-full px-4 py-1.5 text-sm">Ingresar</button>
             )}
             {error.cta === 'advisor' && (
-              <button onClick={contactAdvisor} className="shrink-0 rounded-md bg-clay px-3 py-1.5 font-medium text-white transition hover:bg-clay-dark">Hablar con un asesor</button>
+              <button onClick={contactAdvisor} className="btn-primary shrink-0 rounded-full px-4 py-1.5 text-sm">Hablar con un asesor</button>
             )}
           </div>
         )}
         {showNudge && (
-          <div className="mb-2 flex items-start gap-3 rounded-xl border border-clay/30 bg-white px-3.5 py-3 text-sm">
+          <div className="mb-2 flex items-start gap-3 glass rounded-2xl border-clay/30 px-3.5 py-3 text-sm">
             <div className="min-w-0 flex-1">
               <p className="font-medium">¿Quieres verlo funcionando con tu negocio?</p>
               <p className="mt-0.5 text-mute">Prueba gratis {DEMO_DAYS} días los agentes de ventas de Nous. Sin tarjeta.</p>
-              <button onClick={() => openAuth('register')} className="mt-2.5 rounded-lg bg-clay px-3.5 py-2 font-medium text-white transition hover:bg-clay-dark">Crear mi cuenta gratis</button>
+              <button onClick={() => openAuth('register')} className="btn-primary mt-2.5 rounded-full px-4 py-2 text-sm">Crear mi cuenta gratis</button>
             </div>
-            <button aria-label="Cerrar" onClick={() => setNudgeClosed(true)} className="shrink-0 rounded-md p-1 text-mute transition hover:bg-sand hover:text-ink"><X className="h-4 w-4" /></button>
+            <button aria-label="Cerrar" onClick={() => setNudgeClosed(true)} className="shrink-0 rounded-full p-1 text-mute transition hover:bg-white/10 hover:text-ink"><X className="h-4 w-4" /></button>
           </div>
         )}
-        <div className="rounded-2xl border border-line bg-white shadow-[0_2px_20px_-8px_rgba(31,30,29,0.18)] transition focus-within:border-clay/60 focus-within:shadow-[0_2px_28px_-6px_rgba(201,100,66,0.28)]">
+        <div className="glass-input rounded-2xl">
           <textarea
             ref={taRef}
             rows={empty ? 2 : 1}
@@ -240,7 +240,7 @@ export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill
                 onClick={() => void send(input)}
                 disabled={!input.trim() || loading}
                 aria-label="Enviar"
-                className="flex h-9 w-9 items-center justify-center rounded-lg bg-clay text-white transition hover:bg-clay-dark disabled:cursor-not-allowed disabled:opacity-35"
+                className="btn-primary flex h-10 w-10 items-center justify-center rounded-full"
               >
                 <ArrowUp className="h-4 w-4" />
               </button>
@@ -250,10 +250,10 @@ export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill
 
         {/* Chips de categorías + lista de preguntas (como en la home de Claude) */}
         {empty && agent && (
-          <ul className="mb-12 mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
+          <ul className="glass mb-12 mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl">
             {agent.starters.map((p) => (
               <li key={p}>
-                <button onClick={() => void send(p)} className="w-full px-4 py-3 text-left text-[15px] transition hover:bg-sand">{p}</button>
+                <button onClick={() => void send(p)} className="w-full px-4 py-3 text-left text-[15px] transition hover:bg-white/10">{p}</button>
               </li>
             ))}
           </ul>
@@ -266,8 +266,8 @@ export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill
                   key={c.id}
                   onClick={() => setCat(cat === c.id ? null : c.id)}
                   aria-pressed={cat === c.id}
-                  className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm transition ${
-                    cat === c.id ? 'border-clay bg-white text-clay-dark' : 'border-line bg-paper text-ink hover:border-clay/60'
+                  className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm backdrop-blur-md transition ${
+                    cat === c.id ? 'border-clay/70 bg-clay/15 text-clay-dark' : 'border-white/10 bg-white/[0.05] text-ink hover:border-clay/50 hover:bg-white/10'
                   }`}
                 >
                   <c.icon className="h-4 w-4 text-clay" strokeWidth={1.8} /> {c.label}
@@ -275,10 +275,10 @@ export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill
               ))}
             </div>
             {active && (
-              <ul className="mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
+              <ul className="glass mt-4 divide-y divide-white/10 overflow-hidden rounded-2xl">
                 {active.prompts.map((p) => (
                   <li key={p}>
-                    <button onClick={() => void send(p)} className="w-full px-4 py-3 text-left text-[15px] transition hover:bg-sand">
+                    <button onClick={() => void send(p)} className="w-full px-4 py-3 text-left text-[15px] transition hover:bg-white/10">
                       {p}
                     </button>
                   </li>

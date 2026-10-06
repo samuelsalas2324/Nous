@@ -9,7 +9,7 @@ import { normalizePhone, validateEmail, validateName, validatePassword } from '@
 import { DEFAULT_COUNTRY_CODE, PRIVACY_URL, SALES_AGENTS } from '@/data/content'
 
 const input =
-  'block w-full rounded-xl border border-line bg-white px-3.5 py-3 text-[16px] outline-none transition placeholder:text-mute/60 focus:border-clay/70 focus:ring-2 focus:ring-clay/20 aria-[invalid=true]:border-clay-dark'
+  'glass-input block w-full rounded-xl px-3.5 py-3 text-[16px] text-ink outline-none placeholder:text-mute/60 aria-[invalid=true]:border-clay-dark'
 
 type Errors = Partial<Record<'name' | 'email' | 'phone' | 'password' | 'consent' | 'form', string>>
 
@@ -99,7 +99,7 @@ export default function AuthDialog() {
 
   return (
     <Dialog open={dialog.open} onOpenChange={(o) => !o && closeAuth()}>
-      <DialogContent className="max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto rounded-3xl border-line bg-paper p-6 sm:p-8">
+      <DialogContent className="max-h-[92dvh] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto glass-strong rounded-3xl border-white/15 p-6 text-ink sm:p-8">
         <DialogHeader className="space-y-3 text-left">
           <LogoMark className="h-9 w-9" />
           <DialogTitle className="text-3xl font-normal leading-tight tracking-tight">{title}</DialogTitle>
@@ -107,12 +107,12 @@ export default function AuthDialog() {
         </DialogHeader>
 
         {!enabled ? (
-          <p role="alert" className="rounded-xl bg-[#FBEAE4] px-4 py-3 text-sm text-clay-dark">
+          <p role="alert" className="rounded-xl border border-clay/30 bg-clay/10 px-4 py-3 text-sm text-clay-dark">
             El registro aún no está disponible en este entorno. Falta configurar Firebase (variables VITE_FIREBASE_*).
           </p>
         ) : resetSent ? (
           <div className="space-y-4">
-            <p className="flex gap-2 rounded-xl bg-sand px-4 py-3 text-[15px]">
+            <p className="flex gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px]">
               <Check className="mt-0.5 h-4 w-4 shrink-0 text-clay" /> Si el correo tiene cuenta, te enviamos el enlace. Revisa también la carpeta de spam.
             </p>
             <button onClick={() => switchMode('login')} className="text-sm font-medium text-clay-dark hover:underline">Volver a ingresar</button>
@@ -153,12 +153,12 @@ export default function AuthDialog() {
               </div>
             )}
 
-            {errors.form && <p role="alert" className="rounded-xl bg-[#FBEAE4] px-4 py-3 text-sm text-clay-dark">{errors.form}</p>}
+            {errors.form && <p role="alert" className="rounded-xl border border-clay/30 bg-clay/10 px-4 py-3 text-sm text-clay-dark">{errors.form}</p>}
 
             <button
               type="submit"
               disabled={busy}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-clay px-5 py-3.5 text-[16px] font-medium text-white transition hover:bg-clay-dark disabled:opacity-60"
+              className="btn-primary flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-[16px]"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               {mode === 'register' ? 'Crear cuenta y empezar mi demo' : mode === 'login' ? 'Ingresar' : 'Enviar enlace'}
@@ -170,7 +170,7 @@ export default function AuthDialog() {
               </ul>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-4 text-sm">
               {mode === 'register' ? (
                 <button type="button" onClick={() => switchMode('login')} className="text-mute hover:text-ink">¿Ya tienes cuenta? <span className="font-medium text-clay-dark">Ingresa</span></button>
               ) : (

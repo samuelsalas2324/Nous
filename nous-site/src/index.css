@@ -2,47 +2,224 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ángulo animable para el borde luminoso (Chrome, Safari 16.4+, Firefox 128+; si no, queda estático). */
+@property --a {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
 @layer base {
   :root {
-    --background: 48 33% 97%;
-    --foreground: 30 3% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 30 3% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 30 3% 12%;
-    --primary: 14 55% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 48 22% 92%;
-    --secondary-foreground: 30 3% 12%;
-    --muted: 48 22% 92%;
-    --muted-foreground: 40 4% 41%;
-    --accent: 48 22% 92%;
-    --accent-foreground: 30 3% 12%;
-    --destructive: 0 72% 51%;
+    /* Paleta "Aurora Noir" (canales RGB para poder usar opacidad) */
+    --paper: 7 7 12;
+    --surface: 14 14 22;
+    --sand: 22 22 34;
+    --line: 40 40 60;
+    --ink: 240 238 250;
+    --mute: 156 153 178;
+    --clay: 255 122 77;
+    --clay-dark: 255 170 138;
+    --violet: 139 123 255;
+    --aqua: 53 224 208;
+
+    /* Tokens de shadcn/ui (HSL) alineados con la paleta */
+    --background: 240 30% 4%;
+    --foreground: 250 40% 95%;
+    --card: 240 25% 7%;
+    --card-foreground: 250 40% 95%;
+    --popover: 240 25% 7%;
+    --popover-foreground: 250 40% 95%;
+    --primary: 16 100% 65%;
+    --primary-foreground: 20 60% 8%;
+    --secondary: 245 22% 14%;
+    --secondary-foreground: 250 40% 95%;
+    --muted: 245 22% 14%;
+    --muted-foreground: 250 12% 66%;
+    --accent: 245 22% 14%;
+    --accent-foreground: 250 40% 95%;
+    --destructive: 0 80% 62%;
     --destructive-foreground: 0 0% 100%;
-    --border: 48 20% 87%;
-    --input: 48 20% 87%;
-    --ring: 14 55% 52%;
+    --border: 245 22% 17%;
+    --input: 245 22% 17%;
+    --ring: 16 100% 65%;
     --radius: 0.75rem;
+    color-scheme: dark;
   }
 
   * { @apply border-border; }
 
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; background: rgb(var(--paper)); }
 
   body {
-    @apply bg-background text-foreground antialiased font-sans;
+    @apply bg-paper text-ink antialiased font-sans;
+    font-feature-settings: 'ss01', 'cv11';
+    text-rendering: optimizeLegibility;
   }
 
   h1, h2, h3 { @apply font-serif font-normal tracking-tight; }
 
-  ::selection { background: #C9644233; }
+  ::selection { background: rgb(var(--clay) / 0.35); color: #fff; }
+
+  /* Barras de desplazamiento discretas */
+  * { scrollbar-width: thin; scrollbar-color: rgb(255 255 255 / 0.16) transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgb(255 255 255 / 0.14); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(255 255 255 / 0.24); }
+
+  :focus-visible { outline: 2px solid rgb(var(--clay) / 0.9); outline-offset: 2px; }
 }
 
 @layer components {
-  .eyebrow { @apply text-[12.5px] font-medium uppercase tracking-[0.16em] text-clay; }
+  .eyebrow {
+    @apply font-mono text-[11.5px] font-medium uppercase tracking-[0.2em] text-clay;
+  }
+
+  /* Texto con degradado (titulares) */
+  .text-gradient {
+    background: linear-gradient(180deg, #fff 10%, rgb(200 194 230) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-aurora {
+    background: linear-gradient(100deg, rgb(255 140 96), rgb(255 98 140) 45%, rgb(139 123 255));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Superficie de vidrio */
+  .glass {
+    background: linear-gradient(145deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03) 60%, rgb(255 255 255 / 0.05));
+    border: 1px solid rgb(255 255 255 / 0.12);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.2),
+      inset 0 -1px 0 rgb(255 255 255 / 0.04),
+      0 20px 50px -24px rgb(0 0 0 / 0.7);
+  }
+  /* Vidrio más denso para modales y paneles flotantes */
+  .glass-strong {
+    background: linear-gradient(150deg, rgb(30 28 48 / 0.78), rgb(14 14 26 / 0.82));
+    border: 1px solid rgb(255 255 255 / 0.14);
+    -webkit-backdrop-filter: blur(34px) saturate(170%);
+    backdrop-filter: blur(34px) saturate(170%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.22),
+      0 40px 90px -30px rgb(0 0 0 / 0.85),
+      0 0 0 1px rgb(0 0 0 / 0.3);
+  }
+  /* Entrada de texto en vidrio */
+  .glass-input {
+    background: rgb(255 255 255 / 0.05);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.25);
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  }
+  .glass-input:focus, .glass-input:focus-within {
+    background: rgb(255 255 255 / 0.08);
+    border-color: rgb(var(--clay) / 0.7);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.2), 0 0 0 4px rgb(var(--clay) / 0.14);
+  }
+
+  /* Botón principal: degradado cálido, texto oscuro (contraste alto), brillo al pasar */
+  .btn-primary {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    color: #1d0c05;
+    font-weight: 600;
+    background: linear-gradient(120deg, rgb(255 138 92), rgb(255 98 140) 120%);
+    box-shadow: 0 8px 30px -8px rgb(255 100 80 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.35);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 -60%;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.5), transparent);
+    transform: skewX(-18deg);
+    pointer-events: none;
+    z-index: -1;
+  }
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: saturate(1.1) brightness(1.04);
+    box-shadow: 0 14px 40px -8px rgb(255 100 80 / 0.7), inset 0 1px 0 rgb(255 255 255 / 0.4);
+  }
+  .btn-primary:hover:not(:disabled)::after { animation: shine 0.9s ease; }
+  .btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.99); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Botón secundario translúcido */
+  .btn-ghost {
+    color: rgb(var(--ink));
+    background: rgb(255 255 255 / 0.05);
+    border: 1px solid rgb(255 255 255 / 0.12);
+    transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  }
+  .btn-ghost:hover { background: rgb(255 255 255 / 0.1); border-color: rgb(255 255 255 / 0.22); transform: translateY(-1px); }
+
+  /* Tarjeta con foco de luz que sigue al cursor (la posición la fija use-spotlight) */
+  .spot { position: relative; isolation: isolate; }
+  .spot::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--clay) / 0.16), rgb(var(--violet) / 0.06) 45%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .spot:hover::before { opacity: 1; }
+
+  /* Borde luminoso animado */
+  .glow-border { position: relative; }
+  .glow-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from var(--a), transparent 0 55%, rgb(var(--clay) / 0.95) 70%, rgb(var(--violet) / 0.95) 85%, transparent 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    animation: border-spin 9s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes border-spin { to { --a: 360deg; } }
+
+  /* Fondo: cuadrícula tenue y grano */
+  .bg-grid {
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+
+  /* Compatibilidad con clases anteriores */
   .dot-grid {
-    background-image: radial-gradient(rgba(31, 30, 29, 0.11) 1px, transparent 1.3px);
+    background-image: radial-gradient(rgb(255 255 255 / 0.12) 1px, transparent 1.3px);
     background-size: 22px 22px;
+  }
+}
+
+/* Respeta a quien prefiere menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
   }
 }

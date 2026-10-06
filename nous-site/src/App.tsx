@@ -7,6 +7,7 @@ import AccountMenu from '@/components/AccountMenu'
 import AgentsGrid from '@/components/AgentsGrid'
 import DemoBanner from '@/components/DemoBanner'
 import { useAuth } from '@/context/AuthContext'
+import { useSpotlight } from '@/hooks/use-spotlight'
 import { DEMO_DAYS, type NoticeAction } from '@/lib/demo'
 import { LogoMark } from '@/components/Logo'
 import { Reveal } from '@/components/Reveal'
@@ -15,10 +16,23 @@ import { SERVICES, STEPS, CONTACT_EMAIL, SALES_AGENTS, type SalesAgent } from '@
 
 function Logo() {
   return (
-    <a href="#top" className="flex items-center gap-2.5" aria-label="Nous, inicio">
-      <LogoMark className="h-9 w-9" />
-      <span className="font-serif text-[1.65rem] leading-none tracking-tight">Nous</span>
+    <a href="#top" className="group flex items-center gap-2.5" aria-label="Nous, inicio">
+      <LogoMark className="h-9 w-9 transition duration-500 group-hover:rotate-[-6deg] group-hover:scale-105" />
+      <span className="font-serif text-[1.75rem] leading-none tracking-tight">Nous</span>
     </a>
+  )
+}
+
+/** Fondo fijo: auroras de color + cuadrícula + grano. Es lo que el vidrio esmerilado "refracta". */
+function Aurora() {
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-paper">
+      <div className="absolute -right-[12vw] -top-[18vw] h-[58vw] w-[58vw] min-h-[360px] min-w-[360px] animate-drift rounded-full bg-[radial-gradient(circle_at_center,rgb(255_110_70/0.55),rgb(255_90_130/0.22)_45%,transparent_70%)]" />
+      <div className="absolute -left-[16vw] top-[18vh] h-[52vw] w-[52vw] min-h-[340px] min-w-[340px] animate-drift-slow rounded-full bg-[radial-gradient(circle_at_center,rgb(120_100_255/0.5),rgb(90_80_220/0.18)_50%,transparent_72%)]" />
+      <div className="absolute -bottom-[20vw] right-[8vw] h-[48vw] w-[48vw] min-h-[320px] min-w-[320px] animate-drift rounded-full bg-[radial-gradient(circle_at_center,rgb(40_220_205/0.38),rgb(40_160_220/0.14)_50%,transparent_72%)]" />
+      <div className="bg-grid absolute inset-0 [mask-image:radial-gradient(ellipse_80%_60%_at_50%_20%,black,transparent_75%)]" />
+      <div className="bg-noise absolute inset-0 opacity-[0.09]" />
+    </div>
   )
 }
 
@@ -26,8 +40,12 @@ function SectionHead({ n, label, title, children }: { n: string; label: string; 
   return (
     <Reveal className="mb-12 grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
       <div>
-        <p className="eyebrow mb-4"><span className="mr-3 text-ink/35">{n}</span>{label}</p>
-        <h2 className="max-w-2xl text-4xl leading-[1.05] md:text-[3.25rem]">{title}</h2>
+        <p className="eyebrow mb-5 flex items-center gap-3">
+          <span className="glass rounded-md px-2 py-1 text-[11px] text-ink/80">{n}</span>
+          {label}
+          <span aria-hidden className="h-px w-16 bg-gradient-to-r from-clay/60 to-transparent" />
+        </p>
+        <h2 className="text-gradient max-w-2xl text-[2.6rem] leading-[1.02] md:text-[3.5rem]">{title}</h2>
       </div>
       {children && <p className="max-w-sm leading-relaxed text-mute">{children}</p>}
     </Reveal>
@@ -36,9 +54,9 @@ function SectionHead({ n, label, title, children }: { n: string; label: string; 
 
 function Tile({ icon: Icon, title, desc, className = '', children }: { icon: LucideIcon; title: string; desc: string; className?: string; children: ReactNode }) {
   return (
-    <div className={`flex flex-col rounded-3xl border border-line bg-white p-6 md:p-7 ${className}`}>
+    <div className={`glass spot flex flex-col rounded-3xl p-6 md:p-7 ${className}`}>
       <div className="mb-6 flex items-start gap-3.5">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sand">
+        <span className="glass flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
           <Icon className="h-[18px] w-[18px] text-clay" strokeWidth={1.8} />
         </span>
         <div>
@@ -64,10 +82,13 @@ const PRINCIPLES = [
   { icon: Gauge, t: 'Valor medible', d: 'Cada automatización tiene una métrica: horas ahorradas, errores evitados, costo por tarea.' },
 ]
 
+const HERO_CHIPS = ['Agentes de IA', 'Automatización', 'Humano en el circuito']
+
 export default function App() {
   const [prefill, setPrefill] = useState<Prefill>(null)
   const [agent, setAgent] = useState<SalesAgent | null>(null)
   const { enabled, ready, user, lead, demo, intent, clearIntent, openAuth, track, contactAdvisor } = useAuth()
+  useSpotlight()
 
   function goTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -106,16 +127,18 @@ export default function App() {
   }
 
   return (
-    <div id="top" className="min-h-screen overflow-x-clip">
-      <header className="sticky top-0 z-30 border-b border-line/80 bg-paper/80 backdrop-blur-md">
+    <div id="top" className="relative isolate min-h-screen overflow-x-clip">
+      <Aurora />
+
+      <header className="sticky top-0 z-30 border-b border-white/[0.08] bg-paper/35 backdrop-blur-2xl backdrop-saturate-150">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 md:px-8">
           <Logo />
-          <nav className="hidden items-center gap-6 text-sm text-mute lg:flex xl:gap-8">
-            {enabled && <a href="#agentes" className="transition hover:text-ink">Agentes</a>}
-            <a href="#capacidades" className="transition hover:text-ink">Capacidades</a>
-            <a href="#como-piensa" className="transition hover:text-ink">Cómo piensa</a>
-            <a href="#servicios" className="transition hover:text-ink">Servicios</a>
-            <a href="#metodo" className="transition hover:text-ink">Método</a>
+          <nav className="glass hidden items-center gap-1 rounded-full p-1 text-sm text-mute lg:flex">
+            {enabled && <a href="#agentes" className="rounded-full px-3.5 py-1.5 transition hover:bg-white/10 hover:text-ink">Agentes</a>}
+            <a href="#capacidades" className="rounded-full px-3.5 py-1.5 transition hover:bg-white/10 hover:text-ink">Capacidades</a>
+            <a href="#como-piensa" className="rounded-full px-3.5 py-1.5 transition hover:bg-white/10 hover:text-ink">Cómo piensa</a>
+            <a href="#servicios" className="rounded-full px-3.5 py-1.5 transition hover:bg-white/10 hover:text-ink">Servicios</a>
+            <a href="#metodo" className="rounded-full px-3.5 py-1.5 transition hover:bg-white/10 hover:text-ink">Método</a>
           </nav>
           <div className="flex items-center gap-1.5 sm:gap-3">
             {user ? (
@@ -123,12 +146,12 @@ export default function App() {
             ) : enabled && ready ? (
               <>
                 <button onClick={() => openAuth('login')} className="px-2 py-2 text-sm text-mute transition hover:text-ink">Ingresar</button>
-                <button onClick={() => openAuth('register')} className="rounded-lg bg-clay px-3.5 py-2 text-sm font-medium text-white transition hover:bg-clay-dark sm:px-4">
+                <button onClick={() => openAuth('register')} className="btn-primary rounded-full px-4 py-2 text-sm sm:px-5">
                   Prueba gratis
                 </button>
               </>
             ) : null}
-            <a href="#contacto" className="hidden rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-clay lg:inline-flex">
+            <a href="#contacto" className="btn-ghost hidden rounded-full px-4 py-2 text-sm font-medium lg:inline-flex">
               Hablar con el equipo
             </a>
           </div>
@@ -140,26 +163,31 @@ export default function App() {
       <main>
         {/* HERO */}
         <section className="relative">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[620px] overflow-hidden">
-            <div className="dot-grid absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]" />
-            <div className="absolute -right-24 -top-32 h-[520px] w-[640px] rounded-full bg-clay/15 blur-3xl" />
+          {/* Esferas de vidrio decorativas */}
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-[640px] max-w-6xl">
+            <div className="glass absolute -right-6 top-6 h-44 w-44 animate-floaty rounded-full bg-[radial-gradient(circle_at_30%_25%,rgb(255_255_255/0.35),rgb(255_130_90/0.18)_45%,rgb(120_100_255/0.15))] sm:right-4 sm:h-60 sm:w-60 md:right-10 md:top-2 md:h-72 md:w-72" />
+            <div className="glass absolute left-[6%] top-[480px] hidden h-14 w-14 animate-floaty rounded-full [animation-delay:-3s] lg:block" />
           </div>
 
           <div className="relative mx-auto max-w-6xl px-5 pb-24 pt-12 md:px-8 md:pt-16">
             <div className="grid gap-5 md:grid-cols-[auto_1fr] md:items-end md:gap-14">
-              <h1 className="text-[5.5rem] leading-[0.8] tracking-[-0.045em] sm:text-[7rem] md:text-[9.5rem]">
-                Nous<span className="text-clay">.</span>
+              <h1 className="relative text-[5.5rem] leading-[0.8] tracking-[-0.045em] sm:text-[7rem] md:text-[9.5rem]">
+                <span className="text-gradient">Nous</span>
+                <span className="text-aurora drop-shadow-[0_0_28px_rgb(255_110_90/0.7)]">.</span>
               </h1>
               <div className="md:pb-3">
-                <p className="eyebrow">Centro de experiencia de superinteligencia</p>
-                <p className="mt-3 max-w-lg text-lg leading-relaxed text-mute md:text-xl">
+                <p className="eyebrow flex items-center gap-2.5">
+                  <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-clay opacity-60" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-clay" /></span>
+                  Centro de experiencia de superinteligencia
+                </p>
+                <p className="mt-3 max-w-lg text-lg leading-relaxed text-ink/70 md:text-xl">
                   Una mente que trabaja a tu lado. Aprende, prueba y despliega agentes de IA que automatizan
                   procesos reales, sin perder lo que nos hace humanos.
                 </p>
                 {enabled && (
                   <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
                     {!user && ready && (
-                      <button onClick={() => openAuth('register')} className="inline-flex items-center gap-2 rounded-lg bg-clay px-5 py-3 font-medium text-white transition hover:bg-clay-dark">
+                      <button onClick={() => openAuth('register')} className="btn-primary inline-flex items-center gap-2 rounded-full px-6 py-3.5">
                         Prueba gratis {DEMO_DAYS} días <ArrowRight className="h-4 w-4" />
                       </button>
                     )}
@@ -167,6 +195,11 @@ export default function App() {
                   </div>
                 )}
                 {enabled && !user && ready && <p className="mt-3 text-sm text-mute">Sin tarjeta de crédito · Acceso inmediato</p>}
+                <ul className="mt-6 flex flex-wrap gap-2">
+                  {HERO_CHIPS.map((c) => (
+                    <li key={c} className="glass rounded-full px-3 py-1 font-mono text-[11px] uppercase tracking-wider text-ink/70">{c}</li>
+                  ))}
+                </ul>
               </div>
             </div>
 
@@ -218,17 +251,19 @@ export default function App() {
             </div>
           </section>
 
-          {/* 02 CÓMO PIENSA */}
+          {/* 03 CÓMO PIENSA */}
           <section id="como-piensa" className="scroll-mt-20 pb-28">
             <SectionHead n="03" label="Cómo piensa" title="Un agente no responde: razona, actúa y aprende" />
             <div className="grid items-start gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-14">
               <Reveal>
-                <ol className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
+                <ol className="grid gap-3 sm:grid-cols-2">
                   {LOOP.map((s, i) => (
-                    <li key={s.t} className="bg-paper p-6">
+                    <li key={s.t} className="glass spot rounded-2xl p-6">
                       <div className="mb-5 flex items-center justify-between">
-                        <s.icon className="h-6 w-6 text-clay" strokeWidth={1.6} />
-                        <span className="font-serif text-sm text-mute">0{i + 1}</span>
+                        <span className="glass flex h-10 w-10 items-center justify-center rounded-xl">
+                          <s.icon className="h-5 w-5 text-clay" strokeWidth={1.6} />
+                        </span>
+                        <span className="font-mono text-xs text-mute">0{i + 1}</span>
                       </div>
                       <h3 className="text-2xl">{s.t}</h3>
                       <p className="mt-2 text-[15px] leading-relaxed text-mute">{s.d}</p>
@@ -242,18 +277,20 @@ export default function App() {
             </div>
           </section>
 
-          {/* 03 SERVICIOS */}
+          {/* 04 SERVICIOS */}
           <section id="servicios" className="scroll-mt-20 pb-28">
             <SectionHead n="04" label="Servicios" title="Desde la primera conversación hasta producción">
               Cada servicio se puede explorar con Nous antes de hablar con una persona.
             </SectionHead>
-            <Reveal>
-              <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line md:grid-cols-2 lg:grid-cols-3">
-                {SERVICES.map((s, i) => (
-                  <article key={s.title} className="group flex flex-col bg-paper p-7 transition hover:bg-white">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {SERVICES.map((s, i) => (
+                <Reveal key={s.title} delay={(i % 3) * 90} className="h-full">
+                  <article className="glass spot group flex h-full flex-col rounded-3xl p-7">
                     <div className="mb-10 flex items-center justify-between">
-                      <s.icon className="h-6 w-6 text-clay" strokeWidth={1.6} />
-                      <span className="font-serif text-sm text-mute">0{i + 1}</span>
+                      <span className="glass flex h-11 w-11 items-center justify-center rounded-xl">
+                        <s.icon className="h-5 w-5 text-clay" strokeWidth={1.6} />
+                      </span>
+                      <span className="font-mono text-xs text-mute">0{i + 1}</span>
                     </div>
                     <h3 className="text-2xl leading-snug">{s.title}</h3>
                     <p className="mt-3 flex-1 leading-relaxed text-mute">{s.desc}</p>
@@ -264,23 +301,26 @@ export default function App() {
                       Preguntar a Nous <ArrowUpRight className="h-4 w-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                     </button>
                   </article>
-                ))}
-              </div>
-            </Reveal>
+                </Reveal>
+              ))}
+            </div>
           </section>
 
-          {/* 04 MÉTODO */}
+          {/* 05 MÉTODO */}
           <section id="metodo" className="scroll-mt-20 grid gap-10 pb-28 md:grid-cols-[1fr_1.4fr] md:gap-16">
             <Reveal>
-              <p className="eyebrow mb-4"><span className="mr-3 text-ink/35">05</span>Método</p>
-              <h2 className="text-4xl leading-[1.05] md:text-[3.25rem]">Un método simple para resultados medibles</h2>
+              <p className="eyebrow mb-5 flex items-center gap-3">
+                <span className="glass rounded-md px-2 py-1 text-[11px] text-ink/80">05</span>Método
+                <span aria-hidden className="h-px w-16 bg-gradient-to-r from-clay/60 to-transparent" />
+              </p>
+              <h2 className="text-gradient text-[2.6rem] leading-[1.02] md:text-[3.5rem]">Un método simple para resultados medibles</h2>
               <p className="mt-5 max-w-sm leading-relaxed text-mute">Empezamos pequeño, demostramos valor y escalamos lo que funciona.</p>
             </Reveal>
             <Reveal delay={120}>
-              <ol className="divide-y divide-line border-y border-line">
+              <ol className="relative space-y-4 before:absolute before:bottom-6 before:left-[27px] before:top-6 before:w-px before:bg-gradient-to-b before:from-clay/60 before:via-violet/40 before:to-transparent">
                 {STEPS.map((s) => (
-                  <li key={s.n} className="flex gap-6 py-6">
-                    <span className="w-12 shrink-0 font-serif text-4xl leading-none text-clay">{s.n}</span>
+                  <li key={s.n} className="glass spot relative flex gap-5 rounded-2xl p-5 md:p-6">
+                    <span className="glass relative z-10 flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-full font-serif text-2xl"><span className="text-aurora">{s.n}</span></span>
                     <div>
                       <h3 className="text-2xl">{s.title}</h3>
                       <p className="mt-1.5 leading-relaxed text-mute">{s.desc}</p>
@@ -294,13 +334,14 @@ export default function App() {
           {/* PRINCIPIOS */}
           <section id="principios" className="scroll-mt-20 pb-28">
             <Reveal>
-              <h2 className="mb-12 max-w-2xl text-4xl leading-[1.05] md:text-[3.25rem]">La IA es más poderosa cuando potencia a las personas</h2>
+              <h2 className="text-gradient mb-12 max-w-2xl text-[2.6rem] leading-[1.02] md:text-[3.5rem]">La IA es más poderosa cuando potencia a las personas</h2>
             </Reveal>
-            <div className="grid gap-8 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
               {PRINCIPLES.map((p, i) => (
-                <Reveal key={p.t} delay={i * 100}>
-                  <div className="border-t-2 border-ink pt-5">
-                    <p.icon className="mb-4 h-6 w-6 text-clay" strokeWidth={1.6} />
+                <Reveal key={p.t} delay={i * 100} className="h-full">
+                  <div className="glass spot relative h-full overflow-hidden rounded-3xl p-7">
+                    <div aria-hidden className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-clay/70 to-transparent" />
+                    <p.icon className="mb-5 h-7 w-7 text-clay" strokeWidth={1.5} />
                     <h3 className="text-2xl">{p.t}</h3>
                     <p className="mt-2 leading-relaxed text-mute">{p.d}</p>
                   </div>
@@ -312,28 +353,29 @@ export default function App() {
           {/* CONTACTO */}
           <section id="contacto" className="scroll-mt-20 pb-24">
             <Reveal>
-              <div className="relative overflow-hidden rounded-[28px] bg-ink px-7 py-14 text-paper md:px-14 md:py-20">
-                <div aria-hidden className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-clay/30 blur-3xl" />
-                <div aria-hidden className="dot-grid absolute inset-0 opacity-[0.12] invert [mask-image:linear-gradient(to_left,black,transparent_70%)]" />
+              <div className="glass-strong relative overflow-hidden rounded-[32px] px-7 py-14 md:px-14 md:py-20">
+                <div aria-hidden className="absolute -right-24 -top-28 h-80 w-80 animate-drift rounded-full bg-[radial-gradient(circle,rgb(255_110_70/0.5),transparent_70%)]" />
+                <div aria-hidden className="absolute -bottom-32 left-10 h-72 w-72 animate-drift-slow rounded-full bg-[radial-gradient(circle,rgb(120_100_255/0.4),transparent_70%)]" />
+                <div aria-hidden className="bg-grid absolute inset-0 opacity-70 [mask-image:linear-gradient(to_left,black,transparent_70%)]" />
                 <div className="relative">
-                  <LogoMark className="mb-8 h-10 w-10" />
-                  <h2 className="max-w-2xl text-4xl leading-[1.05] md:text-6xl">Hablemos de tu primer agente de IA</h2>
-                  <p className="mt-5 max-w-lg text-lg leading-relaxed text-paper/70">
+                  <LogoMark className="mb-8 h-11 w-11" />
+                  <h2 className="text-gradient max-w-2xl text-[2.6rem] leading-[1.02] md:text-6xl">Hablemos de tu primer agente de IA</h2>
+                  <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink/70">
                     Cuéntanos qué proceso te quita más tiempo. En una conversación te decimos si vale la pena automatizarlo y cómo.
                   </p>
                   <div className="mt-9 flex flex-wrap items-center gap-3">
                     {enabled && !user && ready && (
                       <button
                         onClick={() => openAuth('register')}
-                        className="inline-flex items-center gap-2 rounded-lg bg-clay px-6 py-3 font-medium text-white transition hover:bg-clay-dark"
+                        className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3.5"
                       >
                         Empieza tu demo gratis <ArrowRight className="h-4 w-4" />
                       </button>
                     )}
                     <a
                       href={`mailto:${CONTACT_EMAIL}`}
-                      className={`inline-flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition ${
-                        enabled && !user && ready ? 'border border-paper/25 text-paper hover:bg-paper/10' : 'bg-clay text-white hover:bg-clay-dark'
+                      className={`inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium ${
+                        enabled && !user && ready ? 'btn-ghost' : 'btn-primary'
                       }`}
                     >
                       Escríbenos <ArrowRight className="h-4 w-4" />
@@ -346,17 +388,17 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="border-t border-line">
+      <footer className="border-t border-white/[0.08] bg-paper/30 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 text-sm text-mute md:flex-row md:items-center md:justify-between md:px-8">
           <div className="flex items-center gap-3">
             <LogoMark className="h-7 w-7" />
             <span>© 2026 Nous. Superinteligencia al servicio de las personas.</span>
           </div>
-          <nav className="flex gap-6">
-            {enabled && <a href="#agentes" className="hover:text-ink">Agentes</a>}
-            <a href="#capacidades" className="hover:text-ink">Capacidades</a>
-            <a href="#servicios" className="hover:text-ink">Servicios</a>
-            <a href="#contacto" className="hover:text-ink">Contacto</a>
+          <nav className="flex gap-6 font-mono text-xs uppercase tracking-wider">
+            {enabled && <a href="#agentes" className="transition hover:text-ink">Agentes</a>}
+            <a href="#capacidades" className="transition hover:text-ink">Capacidades</a>
+            <a href="#servicios" className="transition hover:text-ink">Servicios</a>
+            <a href="#contacto" className="transition hover:text-ink">Contacto</a>
           </nav>
         </div>
       </footer>
