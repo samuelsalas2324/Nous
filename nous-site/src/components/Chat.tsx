@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUp, RotateCcw } from 'lucide-react'
+import { ArrowUp, RotateCcw, X } from 'lucide-react'
 import { Markdown } from './Markdown'
 import { LogoMark } from './Logo'
-import { CATEGORIES } from '@/data/content'
+import { useAuth } from '@/context/AuthContext'
+import { DEMO_DAYS } from '@/lib/demo'
+import { CATEGORIES, type SalesAgent } from '@/data/content'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 export type Prefill = { text: string; nonce: number } | null
+type ChatError = { text: string; cta?: 'login' | 'advisor' } | null
+
+// Tras estas preguntas, al visitante se le invita a registrarse para probar los agentes.
+const NUDGE_AFTER = 2
 
 const MAX_CHARS = 2000
 
@@ -17,25 +23,40 @@ function getGreeting(now = new Date()) {
   return { hello: 'Buenas noches', line: '¿Qué idea quieres convertir en un agente de IA?' }
 }
 
-function errorText(status: number): string {
-  if (status === 404) return 'Nous aún no está conectado: falta desplegar la función /api/chat y definir ANTHROPIC_API_KEY en Vercel.'
-  if (status === 429) return 'Demasiadas consultas seguidas. Espera un momento e inténtalo de nuevo.'
-  if (status === 400 || status === 413) return 'No pude procesar ese mensaje. Prueba con uno más corto.'
-  return 'Algo falló al consultar a Nous. Inténtalo de nuevo en unos segundos.'
+function errorText(status: number, code?: string): NonNullable<ChatError> {
+  if (status === 401) return { text: 'Inicia sesión para hablar con los agentes de ventas.', cta: 'login' }
+  if (status === 403 && code === 'demo_expired') return { text: 'Tu demo terminó y los agentes quedaron en pausa. Un asesor puede habilitarte el acceso completo.', cta: 'advisor' }
+  if (status === 403) return { text: 'Tu cuenta aún no tiene una demo activa. Cierra sesión y vuelve a ingresar para activarla.' }
+  if (status === 404) return { text: 'Nous aún no está conectado: falta desplegar la función /api/chat y definir ANTHROPIC_API_KEY en Vercel.' }
+  if (status === 429) return { text: 'Demasiadas consultas seguidas. Espera un momento e inténtalo de nuevo.' }
+  if (status === 400 || status === 413) return { text: 'No pude procesar ese mensaje. Prueba con uno más corto.' }
+  return { text: 'Algo falló al consultar a Nous. Inténtalo de nuevo en unos segundos.' }
 }
 
-export default function Chat({ prefill }: { prefill: Prefill }) {
+export default function Chat({ prefill, agent, onExitAgent }: { prefill: Prefill; agent: SalesAgent | null; onExitAgent: () => void }) {
+  const { user, openAuth, getToken, track, contactAdvisor } = useAuth()
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ChatError>(null)
   const [cat, setCat] = useState<string | null>(null)
+  const [nudgeClosed, setNudgeClosed] = useState(false)
   const [greeting] = useState(() => getGreeting())
   const scrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const empty = messages.length === 0
   const active = CATEGORIES.find((c) => c.id === cat)
+  const userTurns = messages.filter((m) => m.role === 'user').length
+  const showNudge = !user && !agent && !nudgeClosed && userTurns >= NUDGE_AFTER && !loading
+
+  // Cambiar de agente (o volver a Nous) empieza una conversación nueva.
+  const agentId = agent?.id
+  useEffect(() => {
+    setMessages([])
+    setError(null)
+    setInput('')
+  }, [agentId])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -65,19 +86,32 @@ export default function Chat({ prefill }: { prefill: Prefill }) {
     setError(null)
     setLoading(true)
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (agent) {
+        // Los agentes exigen sesión: el servidor valida el token y que la demo siga vigente.
+        const token = await getToken()
+        if (!token) {
+          setError(errorText(401))
+          setMessages(previous)
+          setInput(content)
+          return
+        }
+        headers.Authorization = `Bearer ${token}`
+      }
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next.slice(-11) }),
+        headers,
+        body: JSON.stringify({ messages: next.slice(-11), ...(agent && { agent: agent.id }) }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok || !data?.reply) {
-        setError(errorText(res.status))
+        setError(errorText(res.status, data?.error))
         setMessages(previous)
         setInput(content)
         return
       }
       setMessages([...next, { role: 'assistant', content: data.reply }])
+      if (agent) track('agent_message', { agentId: agent.id, text: content })
     } catch {
       setError(errorText(0))
       setMessages(previous)
@@ -94,22 +128,35 @@ export default function Chat({ prefill }: { prefill: Prefill }) {
         <div className="bg-gradient-to-b from-clay/[0.07] to-transparent px-5 pb-8 pt-14 md:pt-20">
           <div className="mx-auto max-w-2xl text-center">
             <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3 py-1 text-xs text-mute">
-              <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-clay opacity-50" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-clay" /></span> Nous · en línea
+              <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-clay opacity-50" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-clay" /></span> {agent ? 'Agente de ventas' : 'Nous'} · en línea
             </span>
-            <div className="flex items-center justify-center gap-3.5">
-              <LogoMark variant="plain" className="h-10 w-10 shrink-0 md:h-12 md:w-12" />
-              <h2 className="text-4xl md:text-[3.25rem] md:leading-none">{greeting.hello}</h2>
-            </div>
-            <p className="mt-4 text-lg text-mute">{greeting.line}</p>
+            {agent ? (
+              <>
+                <div className="flex items-center justify-center gap-3.5">
+                  <agent.icon className="h-9 w-9 shrink-0 text-clay md:h-11 md:w-11" strokeWidth={1.5} />
+                  <h2 className="text-3xl md:text-[2.75rem] md:leading-none">{agent.name}</h2>
+                </div>
+                <p className="mt-4 text-lg text-mute">{agent.role}. Cuéntame de tu negocio y empiezo.</p>
+                <button onClick={onExitAgent} className="mt-4 text-sm text-mute underline-offset-4 hover:text-ink hover:underline">Volver a hablar con Nous</button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-3.5">
+                  <LogoMark variant="plain" className="h-10 w-10 shrink-0 md:h-12 md:w-12" />
+                  <h2 className="text-4xl md:text-[3.25rem] md:leading-none">{greeting.hello}</h2>
+                </div>
+                <p className="mt-4 text-lg text-mute">{greeting.line}</p>
+              </>
+            )}
           </div>
         </div>
       ) : (
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between px-5 pt-4">
             <div className="flex items-center gap-2.5 text-sm">
-              <LogoMark className="h-6 w-6" />
-              <span className="font-medium">Nous</span>
-              <span className="hidden text-mute sm:inline">· en línea</span>
+              {agent ? <agent.icon className="h-5 w-5 text-clay" strokeWidth={1.7} /> : <LogoMark className="h-6 w-6" />}
+              <span className="font-medium">{agent ? agent.name : 'Nous'}</span>
+              <span className="hidden text-mute sm:inline">· {agent ? 'agente de ventas' : 'en línea'}</span>
             </div>
             <button
               onClick={() => { setMessages([]); setError(null) }}
@@ -150,7 +197,25 @@ export default function Chat({ prefill }: { prefill: Prefill }) {
       {/* Compositor (siempre montado para conservar el foco) */}
       <div className={`mx-auto px-4 ${empty ? 'max-w-2xl' : 'max-w-3xl pb-4'}`}>
         {error && (
-          <p role="alert" className="mb-2 rounded-lg bg-[#FBEAE4] px-3 py-2 text-sm text-clay-dark">{error}</p>
+          <div role="alert" className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-[#FBEAE4] px-3 py-2 text-sm text-clay-dark">
+            <p className="min-w-0 flex-1 basis-56">{error.text}</p>
+            {error.cta === 'login' && (
+              <button onClick={() => openAuth('login')} className="shrink-0 rounded-md bg-clay px-3 py-1.5 font-medium text-white transition hover:bg-clay-dark">Ingresar</button>
+            )}
+            {error.cta === 'advisor' && (
+              <button onClick={contactAdvisor} className="shrink-0 rounded-md bg-clay px-3 py-1.5 font-medium text-white transition hover:bg-clay-dark">Hablar con un asesor</button>
+            )}
+          </div>
+        )}
+        {showNudge && (
+          <div className="mb-2 flex items-start gap-3 rounded-xl border border-clay/30 bg-white px-3.5 py-3 text-sm">
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">¿Quieres verlo funcionando con tu negocio?</p>
+              <p className="mt-0.5 text-mute">Prueba gratis {DEMO_DAYS} días los agentes de ventas de Nous. Sin tarjeta.</p>
+              <button onClick={() => openAuth('register')} className="mt-2.5 rounded-lg bg-clay px-3.5 py-2 font-medium text-white transition hover:bg-clay-dark">Crear mi cuenta gratis</button>
+            </div>
+            <button aria-label="Cerrar" onClick={() => setNudgeClosed(true)} className="shrink-0 rounded-md p-1 text-mute transition hover:bg-sand hover:text-ink"><X className="h-4 w-4" /></button>
+          </div>
         )}
         <div className="rounded-2xl border border-line bg-white shadow-[0_2px_20px_-8px_rgba(31,30,29,0.18)] transition focus-within:border-clay/60 focus-within:shadow-[0_2px_28px_-6px_rgba(201,100,66,0.28)]">
           <textarea
@@ -162,12 +227,12 @@ export default function Chat({ prefill }: { prefill: Prefill }) {
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(input) }
             }}
-            placeholder={empty ? '¿En qué puedo ayudarte con IA hoy?' : 'Responde a Nous…'}
+            placeholder={agent ? `Cuéntale a ${agent.name} sobre tu negocio…` : empty ? '¿En qué puedo ayudarte con IA hoy?' : 'Responde a Nous…'}
             className="block max-h-44 w-full resize-none bg-transparent px-4 pb-1 pt-4 text-[16px] leading-relaxed outline-none placeholder:text-mute/70"
           />
           <div className="flex items-center justify-between px-3 pb-3 pt-1">
             <span className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-mute">
-              <LogoMark variant="plain" className="h-4 w-4" /> Nous
+              <LogoMark variant="plain" className="h-4 w-4" /> {agent ? agent.name : 'Nous'}
             </span>
             <div className="flex items-center gap-3">
               <span className="hidden text-xs text-mute/80 sm:block">Enter para enviar · Shift + Enter, salto de línea</span>
@@ -184,7 +249,16 @@ export default function Chat({ prefill }: { prefill: Prefill }) {
         </div>
 
         {/* Chips de categorías + lista de preguntas (como en la home de Claude) */}
-        {empty && (
+        {empty && agent && (
+          <ul className="mb-12 mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-white">
+            {agent.starters.map((p) => (
+              <li key={p}>
+                <button onClick={() => void send(p)} className="w-full px-4 py-3 text-left text-[15px] transition hover:bg-sand">{p}</button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {empty && !agent && (
           <div className="pb-12 pt-4">
             <div className="flex flex-wrap justify-center gap-2">
               {CATEGORIES.map((c) => (

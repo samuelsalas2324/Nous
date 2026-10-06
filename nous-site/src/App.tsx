@@ -1,11 +1,17 @@
-import { useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ArrowUpRight, ArrowRight, UserCheck, Lock, Gauge, Eye, Brain, Zap, RefreshCw, Workflow, BookOpenText, LineChart, ShieldCheck } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Chat, { type Prefill } from '@/components/Chat'
+import AuthDialog from '@/components/AuthDialog'
+import AccountMenu from '@/components/AccountMenu'
+import AgentsGrid from '@/components/AgentsGrid'
+import DemoBanner from '@/components/DemoBanner'
+import { useAuth } from '@/context/AuthContext'
+import { DEMO_DAYS, type NoticeAction } from '@/lib/demo'
 import { LogoMark } from '@/components/Logo'
 import { Reveal } from '@/components/Reveal'
 import { FlowVisual, DocsVisual, BarsVisual, PermsVisual, AgentTrace } from '@/components/Visuals'
-import { SERVICES, STEPS, CONTACT_EMAIL } from '@/data/content'
+import { SERVICES, STEPS, CONTACT_EMAIL, SALES_AGENTS, type SalesAgent } from '@/data/content'
 
 function Logo() {
   return (
@@ -60,10 +66,43 @@ const PRINCIPLES = [
 
 export default function App() {
   const [prefill, setPrefill] = useState<Prefill>(null)
+  const [agent, setAgent] = useState<SalesAgent | null>(null)
+  const { enabled, ready, user, lead, demo, intent, clearIntent, openAuth, track, contactAdvisor } = useAuth()
+
+  function goTo(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   function ask(question: string) {
-    document.getElementById('cerebro')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    goTo('cerebro')
     setPrefill({ text: question, nonce: Date.now() })
+  }
+
+  const startAgent = useCallback((a: SalesAgent) => {
+    setAgent(a)
+    track('agent_selected', { agentId: a.id })
+    goTo('cerebro')
+  }, [track])
+
+  // Visitante → registro → demo: quien pidió un agente sin sesión lo recibe apenas entra.
+  useEffect(() => {
+    if (!intent?.agentId || !lead || !demo) return
+    const a = SALES_AGENTS.find((x) => x.id === intent.agentId)
+    clearIntent()
+    if (a && demo.hasAccess) startAgent(a)
+  }, [intent, lead, demo, clearIntent, startAgent])
+
+  function tryAgent(a: SalesAgent) {
+    if (!enabled) return ask(`Quiero probar el agente "${a.name}": ¿cómo funcionaría en mi negocio?`)
+    if (!user) return openAuth('register', { agentId: a.id })
+    if (!lead || !demo) return
+    if (!demo.hasAccess) return contactAdvisor()
+    startAgent(a)
+  }
+
+  function onNoticeAction(action: NoticeAction) {
+    if (action === 'advisor') contactAdvisor()
+    else goTo('agentes')
   }
 
   return (
@@ -71,17 +110,32 @@ export default function App() {
       <header className="sticky top-0 z-30 border-b border-line/80 bg-paper/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 md:px-8">
           <Logo />
-          <nav className="hidden items-center gap-8 text-sm text-mute md:flex">
+          <nav className="hidden items-center gap-6 text-sm text-mute lg:flex xl:gap-8">
+            {enabled && <a href="#agentes" className="transition hover:text-ink">Agentes</a>}
             <a href="#capacidades" className="transition hover:text-ink">Capacidades</a>
             <a href="#como-piensa" className="transition hover:text-ink">Cómo piensa</a>
             <a href="#servicios" className="transition hover:text-ink">Servicios</a>
             <a href="#metodo" className="transition hover:text-ink">Método</a>
           </nav>
-          <a href="#contacto" className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-clay">
-            Hablar con el equipo
-          </a>
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            {user ? (
+              <AccountMenu onAction={onNoticeAction} />
+            ) : enabled && ready ? (
+              <>
+                <button onClick={() => openAuth('login')} className="px-2 py-2 text-sm text-mute transition hover:text-ink">Ingresar</button>
+                <button onClick={() => openAuth('register')} className="rounded-lg bg-clay px-3.5 py-2 text-sm font-medium text-white transition hover:bg-clay-dark sm:px-4">
+                  Prueba gratis
+                </button>
+              </>
+            ) : null}
+            <a href="#contacto" className="hidden rounded-lg bg-ink px-4 py-2 text-sm font-medium text-paper transition hover:bg-clay lg:inline-flex">
+              Hablar con el equipo
+            </a>
+          </div>
         </div>
       </header>
+
+      <DemoBanner onAction={onNoticeAction} />
 
       <main>
         {/* HERO */}
@@ -102,19 +156,42 @@ export default function App() {
                   Una mente que trabaja a tu lado. Aprende, prueba y despliega agentes de IA que automatizan
                   procesos reales, sin perder lo que nos hace humanos.
                 </p>
+                {enabled && (
+                  <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+                    {!user && ready && (
+                      <button onClick={() => openAuth('register')} className="inline-flex items-center gap-2 rounded-lg bg-clay px-5 py-3 font-medium text-white transition hover:bg-clay-dark">
+                        Prueba gratis {DEMO_DAYS} días <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )}
+                    <a href="#agentes" className="text-sm font-medium text-ink underline-offset-4 transition hover:text-clay hover:underline">Ver los agentes de ventas</a>
+                  </div>
+                )}
+                {enabled && !user && ready && <p className="mt-3 text-sm text-mute">Sin tarjeta de crédito · Acceso inmediato</p>}
               </div>
             </div>
 
             <div id="cerebro" className="mt-10 scroll-mt-24 md:mt-12">
-              <Chat prefill={prefill} />
+              <Chat prefill={prefill} agent={agent} onExitAgent={() => setAgent(null)} />
             </div>
           </div>
         </section>
 
         <div className="mx-auto max-w-6xl px-5 md:px-8">
-          {/* 01 CAPACIDADES */}
+          {/* 01 AGENTES DE VENTAS */}
+          {enabled && (
+            <section id="agentes" className="scroll-mt-20 pb-28">
+              <SectionHead n="01" label="Agentes de ventas" title="Prueba un agente de ventas con tu propio negocio">
+                {user ? 'Elige uno y cuéntale de tu negocio. Trabaja contigo en esta misma página.' : `Crea tu cuenta y úsalos ${DEMO_DAYS} días gratis. Sin tarjeta.`}
+              </SectionHead>
+              <Reveal>
+                <AgentsGrid activeId={agent?.id ?? null} onTry={tryAgent} />
+              </Reveal>
+            </section>
+          )}
+
+          {/* 02 CAPACIDADES */}
           <section id="capacidades" className="scroll-mt-20 pb-28">
-            <SectionHead n="01" label="Capacidades" title="Lo que Nous puede hacer por tu negocio">
+            <SectionHead n="02" label="Capacidades" title="Lo que Nous puede hacer por tu negocio">
               Ilustraciones de ejemplo de cómo se ve un agente de IA trabajando.
             </SectionHead>
             <div className="grid gap-4 md:grid-cols-6">
@@ -143,7 +220,7 @@ export default function App() {
 
           {/* 02 CÓMO PIENSA */}
           <section id="como-piensa" className="scroll-mt-20 pb-28">
-            <SectionHead n="02" label="Cómo piensa" title="Un agente no responde: razona, actúa y aprende" />
+            <SectionHead n="03" label="Cómo piensa" title="Un agente no responde: razona, actúa y aprende" />
             <div className="grid items-start gap-10 lg:grid-cols-[1fr_1.15fr] lg:gap-14">
               <Reveal>
                 <ol className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
@@ -167,7 +244,7 @@ export default function App() {
 
           {/* 03 SERVICIOS */}
           <section id="servicios" className="scroll-mt-20 pb-28">
-            <SectionHead n="03" label="Servicios" title="Desde la primera conversación hasta producción">
+            <SectionHead n="04" label="Servicios" title="Desde la primera conversación hasta producción">
               Cada servicio se puede explorar con Nous antes de hablar con una persona.
             </SectionHead>
             <Reveal>
@@ -195,7 +272,7 @@ export default function App() {
           {/* 04 MÉTODO */}
           <section id="metodo" className="scroll-mt-20 grid gap-10 pb-28 md:grid-cols-[1fr_1.4fr] md:gap-16">
             <Reveal>
-              <p className="eyebrow mb-4"><span className="mr-3 text-ink/35">04</span>Método</p>
+              <p className="eyebrow mb-4"><span className="mr-3 text-ink/35">05</span>Método</p>
               <h2 className="text-4xl leading-[1.05] md:text-[3.25rem]">Un método simple para resultados medibles</h2>
               <p className="mt-5 max-w-sm leading-relaxed text-mute">Empezamos pequeño, demostramos valor y escalamos lo que funciona.</p>
             </Reveal>
@@ -244,12 +321,24 @@ export default function App() {
                   <p className="mt-5 max-w-lg text-lg leading-relaxed text-paper/70">
                     Cuéntanos qué proceso te quita más tiempo. En una conversación te decimos si vale la pena automatizarlo y cómo.
                   </p>
-                  <a
-                    href={`mailto:${CONTACT_EMAIL}`}
-                    className="mt-9 inline-flex items-center gap-2 rounded-lg bg-clay px-6 py-3 font-medium text-white transition hover:bg-clay-dark"
-                  >
-                    Escríbenos <ArrowRight className="h-4 w-4" />
-                  </a>
+                  <div className="mt-9 flex flex-wrap items-center gap-3">
+                    {enabled && !user && ready && (
+                      <button
+                        onClick={() => openAuth('register')}
+                        className="inline-flex items-center gap-2 rounded-lg bg-clay px-6 py-3 font-medium text-white transition hover:bg-clay-dark"
+                      >
+                        Empieza tu demo gratis <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )}
+                    <a
+                      href={`mailto:${CONTACT_EMAIL}`}
+                      className={`inline-flex items-center gap-2 rounded-lg px-6 py-3 font-medium transition ${
+                        enabled && !user && ready ? 'border border-paper/25 text-paper hover:bg-paper/10' : 'bg-clay text-white hover:bg-clay-dark'
+                      }`}
+                    >
+                      Escríbenos <ArrowRight className="h-4 w-4" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </Reveal>
@@ -264,12 +353,15 @@ export default function App() {
             <span>© 2026 Nous. Superinteligencia al servicio de las personas.</span>
           </div>
           <nav className="flex gap-6">
+            {enabled && <a href="#agentes" className="hover:text-ink">Agentes</a>}
             <a href="#capacidades" className="hover:text-ink">Capacidades</a>
             <a href="#servicios" className="hover:text-ink">Servicios</a>
             <a href="#contacto" className="hover:text-ink">Contacto</a>
           </nav>
         </div>
       </footer>
+
+      <AuthDialog />
     </div>
   )
 }

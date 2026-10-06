@@ -1,7 +1,84 @@
-import { Compass, Bot, BookOpenText, LineChart, GraduationCap, ShieldCheck, Workflow } from 'lucide-react'
+import { Compass, Bot, BookOpenText, LineChart, GraduationCap, ShieldCheck, Workflow, Target, MessageCircle, CalendarCheck, Handshake, FileText, Repeat } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 // Edita aquí el contenido real (servicios, correo de contacto, etc.)
 export const CONTACT_EMAIL = 'hola@tudominio.com'
+
+// Número de WhatsApp comercial en formato internacional, sin "+" (opcional). Si falta, el CTA usa el correo.
+export const WHATSAPP_NUMBER: string = import.meta.env.VITE_WHATSAPP_NUMBER || ''
+export const PRIVACY_URL: string = import.meta.env.VITE_PRIVACY_URL || ''
+export const DEFAULT_COUNTRY_CODE: string = import.meta.env.VITE_DEFAULT_COUNTRY_CODE || '57'
+
+export interface SalesAgent {
+  /** Debe coincidir con AGENTS en api/chat.js y con validAgent() en firestore.rules. */
+  id: string
+  name: string
+  role: string
+  desc: string
+  icon: LucideIcon
+  channels: string[]
+  starters: string[]
+}
+
+export const DEFAULT_AGENT = 'calificador'
+
+// Catálogo de agentes de ventas que el prospecto puede probar durante su demo.
+export const SALES_AGENTS: SalesAgent[] = [
+  {
+    id: 'calificador',
+    name: 'Calificador de prospectos',
+    role: 'Prioriza quién merece tu tiempo',
+    desc: 'Puntúa cada contacto entrante según presupuesto, necesidad y urgencia, y te dice a quién llamar primero.',
+    icon: Target,
+    channels: ['Web', 'CRM'],
+    starters: ['Vendo servicios B2B y recibo 40 contactos a la semana. ¿Cómo los calificarías?', 'Muéstrame preguntas de calificación para mi negocio'],
+  },
+  {
+    id: 'seguimiento',
+    name: 'Seguimiento 24/7',
+    role: 'Nadie se queda sin respuesta',
+    desc: 'Redacta y programa seguimientos por WhatsApp y correo hasta obtener respuesta, con el tono de tu marca.',
+    icon: MessageCircle,
+    channels: ['WhatsApp', 'Correo'],
+    starters: ['Cotizé a un cliente hace 5 días y no responde. ¿Qué le escribo?', 'Diséñame una secuencia de 4 seguimientos'],
+  },
+  {
+    id: 'agendador',
+    name: 'Agendador de reuniones',
+    role: 'De la conversación a la cita',
+    desc: 'Propone horarios, confirma, reprograma y recuerda la cita para que menos prospectos se pierdan en el camino.',
+    icon: CalendarCheck,
+    channels: ['WhatsApp', 'Calendario'],
+    starters: ['Quiero que mis prospectos agenden una llamada de 20 minutos solos', 'Redacta el mensaje para confirmar y recordar una cita'],
+  },
+  {
+    id: 'objeciones',
+    name: 'Manejo de objeciones',
+    role: 'Responde al "está caro" y al "lo pienso"',
+    desc: 'Prepara respuestas para las objeciones más comunes de tu sector y te entrena para usarlas en la conversación.',
+    icon: Handshake,
+    channels: ['Web', 'WhatsApp'],
+    starters: ['Mis clientes dicen "está muy caro". ¿Cómo respondo?', 'Hagamos un simulacro de objeciones para mi producto'],
+  },
+  {
+    id: 'propuestas',
+    name: 'Propuestas comerciales',
+    role: 'Propuestas claras en minutos',
+    desc: 'Convierte la conversación con el cliente en una propuesta ordenada: alcance, beneficios, inversión y siguientes pasos.',
+    icon: FileText,
+    channels: ['Correo', 'CRM'],
+    starters: ['Arma la estructura de una propuesta para un cliente de mi sector', '¿Qué debe incluir una propuesta que cierre?'],
+  },
+  {
+    id: 'reactivador',
+    name: 'Reactivación de clientes',
+    role: 'Recupera oportunidades dormidas',
+    desc: 'Detecta clientes y cotizaciones inactivas y les escribe en el momento justo para retomar la conversación.',
+    icon: Repeat,
+    channels: ['WhatsApp', 'Correo'],
+    starters: ['Tengo clientes que no compran hace 6 meses. ¿Cómo los reactivo?', 'Redacta un mensaje de reactivación que no suene a insistencia'],
+  },
+]
 
 export const SERVICES = [
   {

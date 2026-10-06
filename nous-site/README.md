@@ -48,6 +48,19 @@ Se configuran en Vercel: *Settings → Environment Variables*.
 2. Define las variables de entorno de arriba.
 3. Deploy. Prueba el chat en la URL resultante.
 
+## Captación de prospectos (Firebase)
+
+Registro e inicio de sesión con **Firebase Authentication**; cada registro crea un prospecto en **Firestore** con una **demo gratuita de 3 días** para probar los agentes de ventas. Embudo: visitante → registro → demo → interacción → seguimiento → cliente. Los avisos comerciales aparecen durante y antes del vencimiento de la demo.
+
+Firebase es opcional: sin las variables `VITE_FIREBASE_*` la web funciona como antes (sin registro). Configuración, modelo de datos, reglas, pruebas y próximas integraciones (WhatsApp, correo, campañas): **[docs/CRM.md](docs/CRM.md)**.
+
+```bash
+pnpm test         # lógica del embudo
+pnpm emulators    # Auth + Firestore locales (necesita Java)
+pnpm test:rules   # reglas de seguridad de Firestore
+pnpm dev:emu      # web contra los emuladores
+```
+
 ## Seguridad
 
 - La API key solo existe en el servidor; el navegador habla con `/api/chat`, nunca con Anthropic.
@@ -60,4 +73,5 @@ Se configuran en Vercel: *Settings → Environment Variables*.
 
 - Sustituir los textos y servicios de ejemplo por el contenido real (`src/data/content.ts`).
 - Cambiar el correo de contacto (`hola@tudominio.com`).
-- Streaming de respuestas, RAG con material propio y captura de leads.
+- Streaming de respuestas y RAG con material propio.
+- Crear el proyecto de Firebase y publicar `firestore.rules` (ver docs/CRM.md).

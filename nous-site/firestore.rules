@@ -1,0 +1,131 @@
+rules_version = '2';
+
+// Modelo de seguridad:
+//  - Cada prospecto solo ve y modifica SU documento (leads/{uid}).
+//  - El prospecto NO puede cambiar su demo, sus datos de contacto ni subirse a "cliente".
+//  - Las notas comerciales viven aparte (internal/commercial) y solo las lee el equipo.
+//  - El equipo se identifica con el custom claim `staff: true` (se asigna con el Admin SDK).
+//  - Nada se borra desde el cliente.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function isStaff() { return signedIn() && request.auth.token.get('staff', false) == true; }
+
+    // Mantener sincronizado con SALES_AGENTS (src/data/content.ts) y AGENTS (api/chat.js).
+    function validAgent(id) {
+      return id in ['calificador', 'seguimiento', 'agendador', 'objeciones', 'propuestas', 'reactivador'];
+    }
+
+    function leadPath(uid) { return /databases/$(database)/documents/leads/$(uid); }
+
+    // ---------- Prospectos ----------
+    match /leads/{uid} {
+      allow read: if isOwner(uid) || isStaff();
+
+      // Registro: el prospecto nace en "demo", con 3 días (±tolerancia por reloj del dispositivo).
+      allow create: if isOwner(uid) && validNewLead(uid);
+
+      // El prospecto solo puede registrar actividad. El equipo puede cambiar cualquier campo.
+      allow update: if isStaff() || (isOwner(uid) && validActivityUpdate());
+
+      allow delete: if isStaff();
+    }
+
+    function validNewLead(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+               'uid', 'name', 'email', 'phone', 'stage', 'registeredAt', 'lastActivityAt', 'demoExpiresAt',
+               'interactionCount', 'messageCount', 'agentsTried', 'assignedAgent', 'interest', 'score',
+               'consent', 'channels', 'attribution'
+             ])
+          && d.keys().hasAll([
+               'uid', 'name', 'email', 'phone', 'stage', 'registeredAt', 'lastActivityAt', 'demoExpiresAt',
+               'interactionCount', 'messageCount', 'agentsTried', 'assignedAgent', 'interest', 'score',
+               'consent', 'channels'
+             ])
+          && d.uid == uid
+          && d.email == request.auth.token.email
+          && d.name is string && d.name.size() >= 1 && d.name.size() <= 80
+          && d.phone is string && d.phone.size() <= 20
+          && d.stage == 'demo'
+          && d.registeredAt == request.time
+          && d.lastActivityAt == request.time
+          && d.demoExpiresAt is timestamp
+          && d.demoExpiresAt >= request.time + duration.value(1, 'd')
+          && d.demoExpiresAt <= request.time + duration.value(3, 'd') + duration.value(6, 'h')
+          && d.interactionCount == 0
+          && d.messageCount == 0
+          && d.agentsTried.size() == 0
+          && validAgent(d.assignedAgent)
+          && d.interest == 'bajo'
+          && d.score == 0
+          && d.consent.dataTreatment == true
+          && d.consent.acceptedAt == request.time
+          && d.channels is map
+          && (!('attribution' in d) || (d.attribution is map && d.attribution.size() <= 10));
+    }
+
+    function validActivityUpdate() {
+      let d = request.resource.data;
+      let o = resource.data;
+      return d.diff(o).affectedKeys().hasOnly([
+               'lastActivityAt', 'interactionCount', 'messageCount', 'agentsTried', 'assignedAgent',
+               'interest', 'score', 'stage', 'advisorRequestedAt'
+             ])
+          && d.lastActivityAt == request.time
+          && (d.interactionCount == o.interactionCount || d.interactionCount == o.interactionCount + 1)
+          && (d.messageCount == o.messageCount || d.messageCount == o.messageCount + 1)
+          && d.agentsTried.size() >= o.agentsTried.size()
+          && d.agentsTried.size() <= 12
+          && d.agentsTried.hasOnly(['calificador', 'seguimiento', 'agendador', 'objeciones', 'propuestas', 'reactivador'])
+          && validAgent(d.assignedAgent)
+          && d.interest in ['bajo', 'medio', 'alto']
+          && d.score is int && d.score >= 0 && d.score <= 100
+          && validStageChange(o.stage, d.stage)
+          && (!('advisorRequestedAt' in d.diff(o).affectedKeys())
+              || (!('advisorRequestedAt' in o) && d.advisorRequestedAt == request.time));
+    }
+
+    // demo → interacción → seguimiento. "cliente" solo lo asigna el equipo.
+    function validStageChange(from, to) {
+      return from == to
+          || (from == 'demo' && to in ['interaccion', 'seguimiento'])
+          || (from == 'interaccion' && to == 'seguimiento');
+    }
+
+    // ---------- Bitácora de interacciones (solo se agrega; la lee el equipo) ----------
+    match /leads/{uid}/interactions/{id} {
+      allow read: if isStaff();
+      allow create: if isOwner(uid)
+        && existsAfter(leadPath(uid))
+        && request.resource.data.keys().hasOnly(['type', 'agentId', 'text', 'channel', 'createdAt'])
+        && request.resource.data.keys().hasAll(['type', 'createdAt'])
+        && request.resource.data.type in ['register', 'login', 'agent_selected', 'agent_message', 'advisor_request', 'notice_click']
+        && request.resource.data.createdAt == request.time
+        && (!('agentId' in request.resource.data) || validAgent(request.resource.data.agentId))
+        && (!('text' in request.resource.data) || (request.resource.data.text is string && request.resource.data.text.size() <= 300))
+        && (!('channel' in request.resource.data) || request.resource.data.channel in ['web']);
+      allow update, delete: if isStaff();
+    }
+
+    // ---------- Notas comerciales (privadas del equipo) ----------
+    match /leads/{uid}/internal/{docId} {
+      allow read, update, delete: if isStaff();
+      allow create: if isStaff()
+        // El sistema deja la primera nota en el mismo lote que crea al prospecto; nunca después.
+        || (isOwner(uid) && docId == 'commercial'
+            && !exists(leadPath(uid))
+            && getAfter(leadPath(uid)).data.registeredAt == request.time
+            && request.resource.data.keys().hasOnly(['notes', 'createdAt'])
+            && request.resource.data.notes is string && request.resource.data.notes.size() <= 300
+            && request.resource.data.createdAt == request.time);
+    }
+
+    // Todo lo demás, cerrado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
